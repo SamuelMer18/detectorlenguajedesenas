@@ -1,27 +1,34 @@
 import pickle
-from sklearn.ensemble import RandomForestClassifier
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.utils import to_categorical
 import numpy as np
-
 
 data_dict = pickle.load(open('./data.pickle', 'rb'))
 
 data = np.asarray(data_dict['data'])
 labels = np.asarray(data_dict['labels'])
 
-x_train, x_test, y_train, y_test = train_test_split(data, labels, test_size=0.2, shuffle=True, stratify=labels)
+x_train, x_test, y_train, y_test = train_test_split(
+    data, labels, test_size=0.2, shuffle=True, stratify=labels)
 
-model = RandomForestClassifier()
 
-model.fit(x_train, y_train)
+num_classes = 26
+y_train = to_categorical(y_train, num_classes)
+y_test = to_categorical(y_test, num_classes)
 
-y_predict = model.predict(x_test)
+model = Sequential()
+model.add(Dense(512, activation='relu', input_shape=(42,)))
+model.add(Dense(256, activation='relu'))
+model.add(Dense(128, activation='relu'))
+model.add(Dense(num_classes, activation='softmax'))
 
-score = accuracy_score(y_predict, y_test)
+model.compile(optimizer='adam', loss='categorical_crossentropy',
+              metrics=['accuracy'])
 
-print('{}% of samples were classified correctly !'.format(score * 100))
+model.fit(x_train, y_train, epochs=10, batch_size=32,
+          validation_data=(x_test, y_test))
 
-f = open('model.p', 'wb')
-pickle.dump({'model': model}, f)
-f.close()
+model.save('model.h5')
